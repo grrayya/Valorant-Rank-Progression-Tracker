@@ -49,7 +49,34 @@ def view_history(conn):
         for match in matches:
             print(f"🎮 {match[0]} on {match[1]} | {match[2]} ({match[3]} RR)")
     print("---------------------\n")
-
+    
+def view_stats(conn):
+    """Calculates win rate and net RR using SQL aggregations."""
+    cursor = conn.cursor()
+    
+    # Get Total RR
+    cursor.execute('SELECT SUM(rr_change) FROM matches')
+    total_rr = cursor.fetchone()[0] or 0
+    
+    # Get Win/Loss counts
+    cursor.execute('SELECT COUNT(*) FROM matches WHERE result = "Win"')
+    wins = cursor.fetchone()[0]
+    
+    cursor.execute('SELECT COUNT(*) FROM matches')
+    total_matches = cursor.fetchone()[0]
+    
+    print("\n--- 📈 Performance Stats ---")
+    print(f"Total Matches Played: {total_matches}")
+    
+    if total_matches > 0:
+        win_rate = (wins / total_matches) * 100
+        print(f"Overall Win Rate: {win_rate:.1f}%")
+        
+        # Color code the RR based on positive or negative
+        rr_display = f"+{total_rr}" if total_rr > 0 else str(total_rr)
+        print(f"Net RR Change: {rr_display}")
+    print("----------------------------\n")
+    
 def main():
     conn = setup_database()
     
