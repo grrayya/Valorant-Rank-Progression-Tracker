@@ -1,6 +1,10 @@
 import sqlite3
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
 
 DB_NAME = "valorant.db"
+console = Console()
 
 def setup_database():
     """Connects to SQLite and creates the matches table if it doesn't exist."""
@@ -37,46 +41,54 @@ def log_match(conn):
     print("✅ Match logged successfully!\n")
 
 def view_history(conn):
-    """Queries and displays all logged matches."""
+    """Queries and displays all logged matches in a table."""
     cursor = conn.cursor()
     cursor.execute('SELECT agent, map, result, rr_change FROM matches')
     matches = cursor.fetchall()
     
-    print("\n--- Match History ---")
-    if not matches:
-        print("No matches logged yet.")
-    else:
-        for match in matches:
-            print(f"🎮 {match[0]} on {match[1]} | {match[2]} ({match[3]} RR)")
-    print("---------------------\n")
+    table = Table(title="🎮 Match History", style="blue")
+    table.add_column("Agent", style="cyan")
+    table.add_column("Map", style="magenta")
+    table.add_column("Result", justify="center")
+    table.add_column("RR Change", justify="right")
     
+    for match in matches:
+        agent, map_name, result, rr = match
+        result_str = f"[green]{result}[/green]" if result == "Win" else f"[red]{result}[/red]"
+        rr_str = f"[green]+{rr}[/green]" if rr > 0 else f"[red]{rr}[/red]"
+        table.add_row(agent, map_name, result_str, rr_str)
+        
+    console.print(table)
+    print("\n")
+
 def view_stats(conn):
-    """Calculates win rate and net RR using SQL aggregations."""
+    """Calculates and displays stats inside a formatted panel."""
     cursor = conn.cursor()
-    
-    # Get Total RR
     cursor.execute('SELECT SUM(rr_change) FROM matches')
     total_rr = cursor.fetchone()[0] or 0
     
-    # Get Win/Loss counts
     cursor.execute('SELECT COUNT(*) FROM matches WHERE result = "Win"')
     wins = cursor.fetchone()[0]
     
     cursor.execute('SELECT COUNT(*) FROM matches')
     total_matches = cursor.fetchone()[0]
     
-    print("\n--- 📈 Performance Stats ---")
-    print(f"Total Matches Played: {total_matches}")
-    
-    if total_matches > 0:
-        win_rate = (wins / total_matches) * 100
-        print(f"Overall Win Rate: {win_rate:.1f}%")
+    if total_matches == 0:
+        console.print(Panel("No matches logged yet.", title="Stats", style="yellow"))
+        return
         
-        # Color code the RR based on positive or negative
-        rr_display = f"+{total_rr}" if total_rr > 0 else str(total_rr)
-        print(f"Net RR Change: {rr_display}")
-    print("----------------------------\n")
+    win_rate = (wins / total_matches) * 100
+    rr_display = f"[green]+{total_rr}[/green]" if total_rr > 0 else f"[red]{total_rr}[/red]"
     
+    stats_text = (
+        f"Total Matches Played: [bold]{total_matches}[/bold]\n"
+        f"Overall Win Rate: [bold cyan]{win_rate:.1f}%[/bold cyan]\n"
+        f"Net RR Change: [bold]{rr_display}[/bold]"
+    )
+    
+    console.print(Panel(stats_text, title="📈 Performance Stats", expand=False, border_style="blue"))
+    print("\n")
+
 def main():
     conn = setup_database()
     
@@ -97,7 +109,6 @@ def main():
         elif choice == '4':
             print("Exiting tracker...")
             conn.close()
-            break
             break
 
 if __name__ == "__main__":
