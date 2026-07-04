@@ -83,7 +83,8 @@ def main():
     while True:
         print("1. Log a match")
         print("2. View history")
-        print("3. Exit")
+        print("3. View overall stats")
+        print("4. Exit")
         
         choice = input("Select an option: ")
         
@@ -92,8 +93,11 @@ def main():
         elif choice == '2':
             view_history(conn)
         elif choice == '3':
+            view_stats(conn)
+        elif choice == '4':
             print("Exiting tracker...")
             conn.close()
+            break
             break
 
 if __name__ == "__main__":
